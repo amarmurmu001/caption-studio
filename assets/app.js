@@ -183,7 +183,7 @@ async function extractAudio(file, onStage) {
   } catch {
     await ctx.close();
     throw new Error(
-      "Could not decode audio from this file. Supported: MP3, WAV, M4A/AAC, OGG, FLAC, and most MP4/MOV/WebM videos. Try converting to MP4 (AAC) or MP3."
+      "Could not decode the audio in this file. Your browser may not support its codec (common with iPhone/HEVC or .mkv videos). Convert it to MP4 (H.264 + AAC) or MP3, then try again."
     );
   }
   const duration = decoded.duration;
@@ -313,6 +313,26 @@ function buildSegments(chunks, fullText, duration) {
   return segments;
 }
 
+function dedupeSegments(segments) {
+  const key = (text) =>
+    (text || "")
+      .toLowerCase()
+      .replace(/[^a-z0-9\u0900-\u097F ]/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
+  const out = [];
+  for (const seg of segments) {
+    const k = key(seg.text);
+    const prev = out[out.length - 1];
+    if (prev && k && k === prev.k) {
+      prev.end = Math.max(prev.end, seg.end);
+      continue;
+    }
+    out.push({ start: seg.start, end: seg.end, text: seg.text, k });
+  }
+  return out.map(({ start, end, text }) => ({ start, end, text }));
+}
+
 async function generate() {
   if (state.running || !state.file) return;
   state.running = true;
@@ -336,9 +356,19 @@ async function generate() {
     els.progressText.textContent = "Loading speech model (first run downloads it)…";
     await loadModel();
 
-    els.progressText.textContent = "Transcribing… this can take a while, please keep the tab open.";
     els.progressBar.classList.add("indeterminate");
-    const result = await transcribe(audio, config.language, duration);
+    const startedAt = Date.now();
+    const tick = setInterval(() => {
+      const secs = Math.round((Date.now() - startedAt) / 1000);
+      els.progressText.textContent = `Transcribing… ${secs}s elapsed — keep this tab open.`;
+    }, 1000);
+    els.progressText.textContent = "Transcribing… starting (keep this tab open)…";
+    let result;
+    try {
+      result = await transcribe(audio, config.language, duration);
+    } finally {
+      clearInterval(tick);
+    }
     els.progressBar.classList.remove("indeterminate");
     els.progressBar.style.width = "100%";
 
@@ -347,6 +377,7 @@ async function generate() {
     state.rawSegments = segments.map((s) => ({ ...s }));
     if (useRoman) segments = romanizeSegments(segments);
     segments = refineSegments(segments, { maxChars: 64, maxDuration: 6 });
+    segments = dedupeSegments(segments);
     state.segments = segments;
     els.progressText.textContent = "Building captions…";
     state.captions = generateCaptions(segments, { language: els.lang.value, emojis: els.emojis.checked });
@@ -518,3 +549,11 @@ function bindEvents() {
 }
 
 bindEvents();
+
+window.addEventListener("error", (e) => {
+  if (e.message) log(`Unexpected error: ${e.message}`, true);
+});
+window.addEventListener("unhandledrejection", (e) => {
+  const reason = e.reason && (e.reason.message || e.reason);
+  if (reason) log(`Unhandled error: ${reason}`, true);
+});

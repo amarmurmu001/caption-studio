@@ -48,7 +48,7 @@ Your site will be live at `https://<username>.github.io/<repo>/`.
 | ----- | ---- | ----- | -------- |
 | Tiny  | 41 MB  | Fastest | Basic — good for clear English |
 | Base  | 77 MB  | Balanced | Decent — okay for Hinglish |
-| Small | 249 MB | Slower | Best — recommended for Hindi/Hinglish |
+| Small | 249 MB | Slower | Best — recommended for Hindi/Hinglish (**default**) |
 
 ## ⚠️ Notes
 
