@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Caption Studio — Trending Captions & SRT for Hindi, English & Hinglish</title>
+    <meta
+      name="description"
+      content="Free, private, in-browser tool that turns any video or audio into accurate Hindi, English and Hinglish captions and an SRT file — always in English letters."
+    />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8E%AC%3C/text%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="assets/style.css" />
+  </head>
+  <body>
+    <div class="bg-glow"></div>
+
+    <header class="site-header">
+      <div class="wrap header-inner">
+        <div class="brand">
+          <span class="brand-mark">🎬</span>
+          <div>
+            <h1>Caption Studio</h1>
+            <p>Trending captions &amp; SRT from any video or audio — Hindi, English &amp; Hinglish</p>
+          </div>
+        </div>
+        <span class="pill">100% free · runs in your browser</span>
+      </div>
+    </header>
+
+    <main class="wrap">
+      <section class="card upload-card">
+        <div
+          id="drop-zone"
+          class="drop-zone"
+          role="button"
+          tabindex="0"
+          aria-label="Upload a video or audio file"
+        >
+          <input id="file-input" type="file" accept="audio/*,video/*,.mp3,.wav,.m4a,.aac,.ogg,.opus,.flac,.mp4,.mov,.mkv,.webm,.3gp" hidden />
+          <div class="drop-icon">⬆️</div>
+          <h2>Drop a video or audio file</h2>
+          <p>or <span class="link">browse your device</span> — MP3, WAV, M4A, MP4, MOV, WEBM and more</p>
+          <p class="hint">Files never leave your device. Everything is processed locally.</p>
+        </div>
+
+        <div id="file-card" class="file-card" hidden>
+          <div class="file-meta">
+            <span class="file-icon">📄</span>
+            <div>
+              <strong id="file-name">file</strong>
+              <span id="file-size" class="muted">0 B</span>
+            </div>
+          </div>
+          <button id="file-clear" class="btn btn-ghost btn-sm" type="button">Remove</button>
+        </div>
+
+        <div class="settings">
+          <label class="field">
+            <span>Language</span>
+            <select id="lang">
+              <option value="hinglish" selected>Hinglish (recommended)</option>
+              <option value="hindi">Hindi</option>
+              <option value="english">English</option>
+              <option value="auto">Auto-detect</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span>Model accuracy</span>
+            <select id="model">
+              <option value="tiny">Tiny — fastest (41 MB)</option>
+              <option value="base" selected>Base — balanced (77 MB)</option>
+              <option value="small">Small — most accurate (249 MB)</option>
+            </select>
+          </label>
+
+          <div class="toggles">
+            <label class="toggle">
+              <input id="romanize" type="checkbox" checked />
+              <span>English letters only (romanize)</span>
+            </label>
+            <label class="toggle">
+              <input id="emojis" type="checkbox" checked />
+              <span>Add emojis to captions</span>
+            </label>
+            <label class="toggle">
+              <input id="device" type="checkbox" />
+              <span>Use WebGPU (experimental, faster)</span>
+            </label>
+          </div>
+        </div>
+
+        <button id="generate-btn" class="btn btn-primary btn-block" type="button" disabled>
+          Generate captions &amp; SRT
+        </button>
+
+        <div id="progress" class="progress" hidden>
+          <div class="progress-track"><div id="progress-bar" class="progress-bar"></div></div>
+          <p id="progress-text" class="progress-text">Starting…</p>
+          <div id="progress-log" class="progress-log"></div>
+        </div>
+      </section>
+
+      <section id="results" class="card results" hidden>
+        <div id="media-wrap" class="media-wrap">
+          <video id="player-video" class="player" controls playsinline></video>
+          <audio id="player-audio" class="player" controls></audio>
+          <div id="subtitle-overlay" class="subtitle-overlay"></div>
+        </div>
+
+        <div class="tabs">
+          <button class="tab active" data-tab="captions" type="button">Caption lines</button>
+          <button class="tab" data-tab="social" type="button">Trending caption</button>
+          <button class="tab" data-tab="srt" type="button">SRT file</button>
+          <button class="tab" data-tab="transcript" type="button">Transcript</button>
+        </div>
+
+        <div id="tab-captions" class="tab-panel active">
+          <div class="panel-head">
+            <h3>Caption lines (click a line to preview)</h3>
+            <button id="btn-copy-captions" class="btn btn-ghost btn-sm" type="button">Copy all</button>
+          </div>
+          <div id="captions-list" class="captions-list"></div>
+        </div>
+
+        <div id="tab-social" class="tab-panel">
+          <div class="panel-head">
+            <h3>Trending caption &amp; hashtags</h3>
+            <button id="btn-copy-social" class="btn btn-ghost btn-sm" type="button">Copy</button>
+          </div>
+          <p id="social-title" class="social-title"></p>
+          <textarea id="social-caption" class="social-caption" rows="5"></textarea>
+          <div id="social-hashtags" class="hashtags"></div>
+          <h4 class="subhead">Alternatives</h4>
+          <div id="variants" class="variants"></div>
+          <button id="btn-download-social" class="btn btn-ghost btn-sm" type="button">Download caption (.txt)</button>
+        </div>
+
+        <div id="tab-srt" class="tab-panel">
+          <div class="panel-head">
+            <h3>SRT file</h3>
+            <div class="btn-row">
+              <button id="btn-download-srt" class="btn btn-primary btn-sm" type="button">Download .srt</button>
+              <button id="btn-download-vtt" class="btn btn-ghost btn-sm" type="button">.vtt</button>
+              <button id="btn-download-txt" class="btn btn-ghost btn-sm" type="button">Plain .txt</button>
+              <button id="btn-download-timestamped" class="btn btn-ghost btn-sm" type="button">Timestamps .txt</button>
+            </div>
+          </div>
+          <pre id="srt-preview" class="srt-preview"></pre>
+        </div>
+
+        <div id="tab-transcript" class="tab-panel">
+          <div class="panel-head">
+            <h3>Full transcript (editable)</h3>
+            <button id="btn-copy-transcript" class="btn btn-ghost btn-sm" type="button">Copy</button>
+          </div>
+          <p id="transcript-stats" class="muted"></p>
+          <textarea id="transcript-text" class="transcript" spellcheck="false"></textarea>
+          <button id="btn-download-transcript" class="btn btn-ghost btn-sm" type="button">Download .txt</button>
+        </div>
+      </section>
+
+      <section class="card info-grid">
+        <div>
+          <h3>🗣️ Hinglish ready</h3>
+          <p>
+            Whisper transcribes Hindi and English code-switching, then a built-in transliterator converts
+            every word to English letters, so you always get clean <strong>Hinglish</strong> output.
+          </p>
+        </div>
+        <div>
+          <h3>⏱️ Accurate subtitles</h3>
+          <p>
+            Word-timed segments are cleaned up, merged and split into readable lines, then exported as
+            standard <strong>.srt</strong>, <strong>.vtt</strong> or plain text.
+          </p>
+        </div>
+        <div>
+          <h3>🔒 Private &amp; free</h3>
+          <p>
+           No sign-up, no API keys, no uploads. The speech model runs on your own device and the
+            first download is cached for next time.
+          </p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="wrap">
+        <p>
+          Built with <a href="https://github.com/huggingface/transformers.js" target="_blank" rel="noopener">Transformers.js</a>
+          &amp; OpenAI Whisper. Runs fully client-side.
+        </p>
+      </div>
+    </footer>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+    <script type="module" src="assets/app.js"></script>
+  </body>
+</html>
